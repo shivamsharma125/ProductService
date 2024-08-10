@@ -26,13 +26,6 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Product createProduct(Product product) {
-        Category category = product.getCategory();
-
-        if (category.getId() == null){
-            Category saveCategory = categoryRepository.save(category);
-            product.setCategory(saveCategory);
-        }
-
         return productRepository.save(product);
     }
 
