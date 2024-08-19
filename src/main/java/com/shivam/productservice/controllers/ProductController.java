@@ -6,6 +6,7 @@ import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.dtos.ValidateTokenResponseDto;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.services.ProductService;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -28,7 +29,7 @@ public class ProductController {
         return productService.createProduct(product);
     }
 
-    @PutMapping()
+    @PutMapping
     public Product replaceProduct(@RequestBody Product product){
         return productService.replaceProduct(product);
     }
@@ -57,5 +58,18 @@ public class ProductController {
     @DeleteMapping("{id}")
     public ResponseEntity<ResponseDto> deleteProduct(@PathVariable("id") Long id){
         return productService.deleteProduct(id);
+    }
+
+    @GetMapping("/search")
+    public Page<Product> searchProduct(@RequestParam("pageNumber") int pageNumber,
+                                       @RequestParam("pageSize") int pageSize){
+        return productService.searchProduct(pageNumber, pageSize);
+    }
+
+    @GetMapping("/search/filter")
+    public Page<Product> searchProduct(@RequestParam("pageNumber") int pageNumber,
+                                       @RequestParam("pageSize") int pageSize,
+                                       @RequestParam("sortBy") String sortingParam){
+        return productService.searchProduct(pageNumber, pageSize, sortingParam);
     }
 }

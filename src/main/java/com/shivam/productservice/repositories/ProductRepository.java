@@ -2,6 +2,8 @@ package com.shivam.productservice.repositories;
 
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.repositories.projections.ProductWithTitleAndDescription;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -17,6 +19,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     List<Product> findAll();
     void deleteById(Long id);
     boolean existsById(Long id);
+    Page<Product> findAll(Pageable pageable);
     // Sample HQL queries
     @Query("select p from products p where p.id = :id")
     Optional<Product> filterProductById(@Param("id") Long id);

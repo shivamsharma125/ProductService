@@ -6,6 +6,9 @@ import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.repositories.CategoryRepository;
 import com.shivam.productservice.repositories.ProductRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -119,5 +122,17 @@ public class ProductServiceImpl implements ProductService {
             responseDto.setMessage("Something went wrong. Please try again.");
         }
         return new ResponseEntity<>(responseDto, HttpStatus.OK);
+    }
+
+    public Page<Product> searchProduct(int pageNumber, int pageSize){
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
+        return productRepository.findAll(pageRequest);
+    }
+
+    @Override
+    public Page<Product> searchProduct(int pageNumber, int pageSize, String sortingParam) {
+        Sort sort = Sort.by(sortingParam).descending();
+        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, sort);
+        return productRepository.findAll(pageRequest);
     }
 }

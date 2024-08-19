@@ -2,6 +2,7 @@ package com.shivam.productservice.services;
 
 import com.shivam.productservice.dtos.ResponseDto;
 import com.shivam.productservice.models.Product;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 
 import java.util.List;
@@ -13,4 +14,6 @@ public interface ProductService {
     Product getProductById(Long id);
     List<Product> getAllProducts();
     ResponseEntity<ResponseDto> deleteProduct(Long id);
+    Page<Product> searchProduct(int pageNumber, int pageSize);
+    Page<Product> searchProduct(int pageNumber, int pageSize, String sortingParam);
 }
