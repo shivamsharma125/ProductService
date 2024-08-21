@@ -12,7 +12,7 @@ public interface ProductService {
     Product replaceProduct(Product product);
     Product updateProduct(Product product);
     Product getProductById(Long id);
-    List<Product> getAllProducts();
+    List<Product> getAllProducts(Long id);
     ResponseEntity<ResponseDto> deleteProduct(Long id);
     Page<Product> searchProduct(int pageNumber, int pageSize);
     Page<Product> searchProduct(int pageNumber, int pageSize, String sortingParam);

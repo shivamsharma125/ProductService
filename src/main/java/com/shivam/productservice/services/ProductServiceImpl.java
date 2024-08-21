@@ -1,6 +1,9 @@
 package com.shivam.productservice.services;
 
 import com.shivam.productservice.dtos.ResponseDto;
+import com.shivam.productservice.dtos.Role;
+import com.shivam.productservice.dtos.UserDetailsResponseDto;
+import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.exceptions.ElementNotFoundException;
 import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
@@ -12,6 +15,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Optional;
@@ -20,11 +24,14 @@ import java.util.Optional;
 public class ProductServiceImpl implements ProductService {
     private ProductRepository productRepository;
     private CategoryRepository categoryRepository;
+    private RestTemplate restTemplate;
 
     public ProductServiceImpl(ProductRepository productRepository,
-                              CategoryRepository categoryRepository){
+                              CategoryRepository categoryRepository,
+                              RestTemplate restTemplate){
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+        this.restTemplate = restTemplate;
     }
 
     @Override
@@ -101,7 +108,34 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> getAllProducts() {
+    public List<Product> getAllProducts(Long id) {
+        // This api is not for all users.
+        // To call this api, a user should be a MENTOR or a ADMIN
+
+        UserDetailsResponseDto responseDto = restTemplate.getForObject(
+                "http://UserService/users/" + id,
+                UserDetailsResponseDto.class
+        );
+
+        if (responseDto == null){
+            throw new RuntimeException("Something went wrong");
+        }
+
+        UserDto userDto = responseDto.getUser();
+
+        boolean isMentorOrAdmin = false;
+
+        for (Role role : userDto.getRoles()){
+            if ("MENTOR".equals(role.getName()) || "ADMIN".equals(role.getName())){
+                isMentorOrAdmin = true;
+                break;
+            }
+        }
+
+        if (!isMentorOrAdmin){
+            throw new RuntimeException("Not MENTOR or a ADMIN user");
+        }
+
         return productRepository.findAll();
     }
 

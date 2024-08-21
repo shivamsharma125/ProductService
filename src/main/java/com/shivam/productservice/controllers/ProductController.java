@@ -50,12 +50,12 @@ public class ProductController {
         return productService.getProductById(id);
     }
 
-    @GetMapping
-    public List<Product> getAllProducts(){
-        return productService.getAllProducts();
+    @GetMapping("/all/{id}")
+    public List<Product> getAllProducts(@PathVariable("id") Long userId){
+        return productService.getAllProducts(userId);
     }
 
-    @DeleteMapping("{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<ResponseDto> deleteProduct(@PathVariable("id") Long id){
         return productService.deleteProduct(id);
     }
