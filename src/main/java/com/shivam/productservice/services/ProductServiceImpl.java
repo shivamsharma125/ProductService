@@ -9,9 +9,11 @@ import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.repositories.CategoryRepository;
 import com.shivam.productservice.repositories.ProductRepository;
+import org.springframework.context.annotation.Primary;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -20,23 +22,29 @@ import org.springframework.web.client.RestTemplate;
 import java.util.List;
 import java.util.Optional;
 
-@Service
+@Service("selfProductService")
+@Primary
 public class ProductServiceImpl implements ProductService {
     private ProductRepository productRepository;
     private CategoryRepository categoryRepository;
     private RestTemplate restTemplate;
+    private RedisTemplate<String,Object> redisTemplate;
 
     public ProductServiceImpl(ProductRepository productRepository,
                               CategoryRepository categoryRepository,
-                              RestTemplate restTemplate){
+                              RestTemplate restTemplate,
+                              RedisTemplate<String,Object> redisTemplate){
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.restTemplate = restTemplate;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
     public Product createProduct(Product product) {
-        return productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
+        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+        return savedProduct;
     }
 
     @Override
@@ -51,7 +59,9 @@ public class ProductServiceImpl implements ProductService {
             throw new ElementNotFoundException("product with id " + product.getId() + " does not exists.");
         }
 
-        return createProduct(product);
+        Product savedProduct = productRepository.save(product);
+        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+        return savedProduct;
     }
 
     @Override
@@ -93,18 +103,30 @@ public class ProductServiceImpl implements ProductService {
             saveProduct.setImage(product.getImage());
         }
 
-        return productRepository.save(saveProduct);
+        Product savedProduct = productRepository.save(saveProduct);
+
+        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+
+        return savedProduct;
     }
 
     @Override
     public Product getProductById(Long id) {
+        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + id);
+
+        if (product != null) return product;
+
         Optional<Product> optionalProduct = productRepository.findById(id);
 
         if (optionalProduct.isEmpty()){
             throw new ElementNotFoundException("product with id " + id + " does not exists.");
         }
 
-        return optionalProduct.get();
+        product = optionalProduct.get();
+
+        redisTemplate.opsForHash().put("PRODUCTS", "product_" + product.getId(), product);
+
+        return product;
     }
 
     @Override
@@ -152,6 +174,7 @@ public class ProductServiceImpl implements ProductService {
         ResponseDto responseDto = new ResponseDto();
         if (!productRepository.existsById(id)){
             responseDto.setMessage("product with id " + id + " is successfully deleted.");
+            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + id);
         } else {
             responseDto.setMessage("Something went wrong. Please try again.");
         }
