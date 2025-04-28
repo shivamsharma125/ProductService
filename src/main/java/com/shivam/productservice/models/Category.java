@@ -13,4 +13,5 @@ public class Category extends BaseModel implements Serializable {
 //    @OneToMany(mappedBy = "category", cascade = CascadeType.REMOVE)
 //    private List<Product> products;
     private String title;
+    private String description;
 }

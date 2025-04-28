@@ -16,7 +16,7 @@ public class ProductUtils {
 
         product.setCategory(category);
         product.setDescription(productDto.getDescription());
-        product.setImage(productDto.getImage());
+        product.setImageUrl(productDto.getImage());
 
         return product;
     }
@@ -28,7 +28,7 @@ public class ProductUtils {
         fakeStoreProductDto.setPrice(product.getPrice());
         fakeStoreProductDto.setCategory(product.getCategory().getTitle());
         fakeStoreProductDto.setDescription(product.getDescription());
-        fakeStoreProductDto.setImage(product.getImage());
+        fakeStoreProductDto.setImage(product.getImageUrl());
 
         return fakeStoreProductDto;
     }

@@ -99,8 +99,8 @@ public class ProductServiceImpl implements ProductService {
             saveProduct.setDescription(product.getDescription());
         }
 
-        if (product.getImage() != null){
-            saveProduct.setImage(product.getImage());
+        if (product.getImageUrl() != null){
+            saveProduct.setImageUrl(product.getImageUrl());
         }
 
         Product savedProduct = productRepository.save(saveProduct);

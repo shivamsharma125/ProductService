@@ -17,5 +17,5 @@ public class Product extends BaseModel implements Serializable {
     @ManyToOne(cascade = CascadeType.PERSIST)
     private Category category;
     private String description;
-    private String image;
+    private String imageUrl;
 }
