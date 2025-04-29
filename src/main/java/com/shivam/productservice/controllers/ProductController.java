@@ -1,12 +1,17 @@
 package com.shivam.productservice.controllers;
 
 import com.shivam.productservice.commons.AuthenticationCommons;
-import com.shivam.productservice.dtos.ResponseDto;
+import com.shivam.productservice.dtos.CategoryDto;
+import com.shivam.productservice.dtos.ProductDto;
 import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.dtos.ValidateTokenResponseDto;
+import com.shivam.productservice.exceptions.InvalidProductIdException;
+import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.services.ProductService;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -15,49 +20,61 @@ import java.util.List;
 @RestController
 @RequestMapping("/products")
 public class ProductController {
-    private ProductService productService;
-    private AuthenticationCommons authenticationCommons;
+    private final ProductService productService;
+    private final AuthenticationCommons authenticationCommons;
 
-    public ProductController(ProductService productService,
+    public ProductController(@Qualifier("fakeStoreProductService") ProductService productService,
                              AuthenticationCommons authenticationCommons){
         this.productService = productService;
         this.authenticationCommons = authenticationCommons;
     }
 
+    @GetMapping("/all/{userId}")
+    public ResponseEntity<List<ProductDto>> getAllProducts(@PathVariable("userId") Long userId){
+        List<Product> products = productService.getAllProducts(userId);
+
+        List<ProductDto> productDtos = products.stream()
+                .map(this::from)
+                .toList();
+
+        return new ResponseEntity<>(productDtos,HttpStatus.OK);
+    }
+
     @PostMapping
-    public Product createProduct(@RequestBody Product product){
-        return productService.createProduct(product);
-    }
-
-    @PutMapping
-    public Product replaceProduct(@RequestBody Product product){
-        return productService.replaceProduct(product);
-    }
-
-    @PatchMapping
-    public Product updateProduct(@RequestBody Product product){
-        return productService.updateProduct(product);
+    public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto productDto){
+        Product savedProduct = productService.createProduct(from(productDto));
+        return new ResponseEntity<>(from(savedProduct),HttpStatus.CREATED);
     }
 
     @GetMapping("/{id}/{token}")
-    public Product getProductById(@PathVariable("id") Long id, @PathVariable("token") String token){
+    public ResponseEntity<ProductDto> getProductById(@PathVariable("id") Long productId, @PathVariable("token") String token) {
+        if(productId <= 0) throw new InvalidProductIdException(productId);
+
         // Service can be called by authenticated users only
         ValidateTokenResponseDto responseDto = authenticationCommons.validateToken(token);
         UserDto userDto = responseDto.getUserDto();
         if (userDto == null){
             throw new RuntimeException(responseDto.getFailureMessage());
         }
-        return productService.getProductById(id);
+        Product product = productService.getProductById(productId);
+
+        return new ResponseEntity<>(from(product), HttpStatus.OK);
     }
 
-    @GetMapping("/all/{id}")
-    public List<Product> getAllProducts(@PathVariable("id") Long userId){
-        return productService.getAllProducts(userId);
+    @PutMapping("/{id}")
+    public ResponseEntity<ProductDto> updateProduct(@PathVariable("id") Long productId, @RequestBody ProductDto productDto){
+        Product updatedProduct = productService.updateProduct(productId,from(productDto));
+        return new ResponseEntity<>(from(updatedProduct), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<ResponseDto> deleteProduct(@PathVariable("id") Long id){
-        return productService.deleteProduct(id);
+    public ResponseEntity<String> deleteProduct(@PathVariable("id") Long productId){
+        Boolean isDeleted = productService.deleteProduct(productId);
+
+        if(!isDeleted)
+            return new ResponseEntity<>("Something went wrong. Please try again", HttpStatus.INTERNAL_SERVER_ERROR);
+
+        return new ResponseEntity<>("product with id " + productId + " is successfully deleted", HttpStatus.OK);
     }
 
     @GetMapping("/search")
@@ -71,5 +88,37 @@ public class ProductController {
                                        @RequestParam("pageSize") int pageSize,
                                        @RequestParam("sortBy") String sortingParam){
         return productService.searchProduct(pageNumber, pageSize, sortingParam);
+    }
+
+    private ProductDto from(Product product) {
+        ProductDto productDto = new ProductDto();
+        productDto.setId(product.getId());
+        productDto.setTitle(product.getTitle());
+        productDto.setDescription(product.getDescription());
+        productDto.setPrice(product.getPrice());
+        productDto.setImageUrl(product.getImageUrl());
+        if(product.getCategory() != null) {
+            CategoryDto categoryDto = new CategoryDto();
+            categoryDto.setTitle(product.getCategory().getTitle());
+            categoryDto.setId(product.getCategory().getId());
+            categoryDto.setDescription(product.getCategory().getDescription());
+            productDto.setCategory(categoryDto);
+        }
+        return productDto;
+    }
+
+    private Product from(ProductDto productDto) {
+        Product product = new Product();
+        product.setId(productDto.getId());
+        product.setTitle(productDto.getTitle());
+        product.setPrice(productDto.getPrice());
+        product.setImageUrl(productDto.getImageUrl());
+        product.setDescription(productDto.getDescription());
+        if(productDto.getCategory() != null) {
+            Category category = new Category();
+            category.setTitle(productDto.getCategory().getTitle());
+            product.setCategory(category);
+        }
+        return product;
     }
 }

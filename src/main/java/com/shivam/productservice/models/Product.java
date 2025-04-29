@@ -18,4 +18,5 @@ public class Product extends BaseModel implements Serializable {
     private Category category;
     private String description;
     private String imageUrl;
+    private Boolean isPremium;
 }

@@ -1,40 +1,47 @@
 package com.shivam.productservice.services;
 
+import com.shivam.productservice.clients.FakeStoreApiClient;
 import com.shivam.productservice.dtos.FakeStoreProductDto;
-import com.shivam.productservice.dtos.ResponseDto;
+import com.shivam.productservice.exceptions.ProductNotFoundException;
+import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
-import com.shivam.productservice.utils.ProductUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpMessageConverterExtractor;
-import org.springframework.web.client.RequestCallback;
-import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Service("fakeStoreProductService")
 public class FakeStoreProductService implements ProductService {
-    private RestTemplate restTemplate;
-    private RedisTemplate<String,Object> redisTemplate;
+    private final FakeStoreApiClient fakeStoreApiClient;
+    private final RedisTemplate<String,Object> redisTemplate;
 
-    public FakeStoreProductService(RestTemplate restTemplate,
+    public FakeStoreProductService(FakeStoreApiClient fakeStoreApiClient,
                                    RedisTemplate<String,Object> redisTemplate){
-        this.restTemplate = restTemplate;
+        this.fakeStoreApiClient = fakeStoreApiClient;
         this.redisTemplate = redisTemplate;
     }
 
     @Override
+    public List<Product> getAllProducts(Long userId) {
+        List<FakeStoreProductDto> fakeStoreProductDtos = fakeStoreApiClient.getAllProducts();
+
+        if (fakeStoreProductDtos == null) throw new ProductNotFoundException("No products available!");
+
+        return fakeStoreProductDtos.stream()
+                .map(this::from)
+                .toList();
+    }
+
+    @Override
     public Product createProduct(Product product) {
-        FakeStoreProductDto fakeStoreProductDto = ProductUtils.convert(product);
-        FakeStoreProductDto responseProductDto = restTemplate.postForObject("https://fakestoreapi.com/products",
-                fakeStoreProductDto, FakeStoreProductDto.class);
-        if (responseProductDto == null) throw new RuntimeException("Something went wrong. Please try again!");
-        Product savedProduct = ProductUtils.convert(responseProductDto);
+        FakeStoreProductDto fakeStoreProductDto = from(product);
+
+        fakeStoreProductDto = fakeStoreApiClient.createProduct(fakeStoreProductDto);
+
+        if (fakeStoreProductDto == null) throw new RuntimeException("Something went wrong. Please try again!");
+
+        Product savedProduct = from(fakeStoreProductDto);
 
         // save product in cache
         redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
@@ -43,17 +50,36 @@ public class FakeStoreProductService implements ProductService {
     }
 
     @Override
-    public Product replaceProduct(Product product) {
-        FakeStoreProductDto fakeStoreProductDto = ProductUtils.convert(product);
-        RequestCallback requestCallback = restTemplate.httpEntityCallback(fakeStoreProductDto,FakeStoreProductDto.class);
-        HttpMessageConverterExtractor<FakeStoreProductDto> responseExtractor =
-                new HttpMessageConverterExtractor<>(FakeStoreProductDto.class, restTemplate.getMessageConverters());
-        FakeStoreProductDto responseProductDto = restTemplate.execute("https://fakestoreapi.com/products/" + product.getId(),
-                HttpMethod.PUT, requestCallback, responseExtractor);
+    public Product getProductById(Long productId) throws ProductNotFoundException {
+//      first check this product in the cache
+        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + productId);
 
-        if (responseProductDto == null) throw new RuntimeException("Something went wrong while updating the product");
+        if (product != null) // CACHE HIT
+            return product;
 
-        Product savedProduct = ProductUtils.convert(responseProductDto);
+        // product doesn't found in cache (CACHE MISS), fetch it from FakeStore
+        FakeStoreProductDto fakeStoreProductDto = fakeStoreApiClient.getProductById(productId);
+
+        if(fakeStoreProductDto == null) throw new ProductNotFoundException(productId);
+
+        product = from(fakeStoreProductDto);
+
+        // save the result in the cache
+        redisTemplate.opsForHash().put("PRODUCTS", "product_" + productId, product);
+
+        return product;
+    }
+
+    @Override
+    public Product updateProduct(Long productId, Product product) {
+        FakeStoreProductDto fakeStoreProductDto = from(product);
+
+        fakeStoreProductDto = fakeStoreApiClient.updateProduct(productId,fakeStoreProductDto);
+
+        if (fakeStoreProductDto == null)
+            throw new RuntimeException("Something went wrong while updating the product. Please try again");
+
+        Product savedProduct = from(fakeStoreProductDto);
 
         // save the product in cache
         redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
@@ -62,67 +88,15 @@ public class FakeStoreProductService implements ProductService {
     }
 
     @Override
-    public Product updateProduct(Product product) {
-        return replaceProduct(product);
-    }
+    public Boolean deleteProduct(Long productId) {
+        FakeStoreProductDto responseProductDto = fakeStoreApiClient.deleteProduct(productId);
 
-    @Override
-    public Product getProductById(Long id) {
-        // first check this product in the cache
-        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + id);
-
-        if (product != null) { // CACHE HIT
-            return product;
+        if(responseProductDto != null) {
+            // product is deleted from db, delete the product from cache as well
+            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + productId);
         }
 
-        // product doesn't found in cache (CACHE MISS), fetch it from FakeStore
-        String fakeStoreURL = "https://fakestoreapi.com/products/" + id;
-        FakeStoreProductDto productDto = restTemplate.getForObject(fakeStoreURL, FakeStoreProductDto.class);
-
-        if (productDto == null) throw new RuntimeException("Product not available!");
-
-        product = ProductUtils.convert(productDto);
-
-        // save the result in the cache
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + id, product);
-
-        return product;
-    }
-
-    @Override
-    public List<Product> getAllProducts(Long id) {
-        String fakeStoreURL = "https://fakestoreapi.com/products";
-        FakeStoreProductDto[] productDtos = restTemplate.getForObject(fakeStoreURL, FakeStoreProductDto[].class);
-
-        if (productDtos == null) throw new RuntimeException("No products available!");
-
-        List<Product> productList = new ArrayList<>();
-        for(FakeStoreProductDto productDto : productDtos){
-            Product product = ProductUtils.convert(productDto);
-            productList.add(product);
-        }
-
-        return productList;
-    }
-
-    @Override
-    public ResponseEntity<ResponseDto> deleteProduct(Long id) {
-        RequestCallback requestCallback = restTemplate.httpEntityCallback(null,FakeStoreProductDto.class);
-        HttpMessageConverterExtractor<FakeStoreProductDto> responseExtractor =
-                new HttpMessageConverterExtractor<>(FakeStoreProductDto.class, restTemplate.getMessageConverters());
-        FakeStoreProductDto responseProductDto = restTemplate.execute("https://fakestoreapi.com/products/" + id,
-                HttpMethod.DELETE, requestCallback, responseExtractor);
-
-        ResponseDto responseDto = new ResponseDto();
-        if (responseProductDto == null){
-            responseDto.setMessage("Something went wrong. Please try again.");
-        } else {
-            responseDto.setMessage("product with id " + id + " is successfully deleted.");
-            // delete the product from cache as well
-            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + id);
-        }
-
-        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+        return responseProductDto != null;
     }
 
     @Override
@@ -133,5 +107,34 @@ public class FakeStoreProductService implements ProductService {
     @Override
     public Page<Product> searchProduct(int pageNumber, int pageSize, String sortingParam) {
         return null;
+    }
+
+    private FakeStoreProductDto from(Product product) {
+        FakeStoreProductDto fakeStoreProductDto = new FakeStoreProductDto();
+        fakeStoreProductDto.setId(product.getId());
+        fakeStoreProductDto.setTitle(product.getTitle());
+        fakeStoreProductDto.setPrice(product.getPrice());
+        fakeStoreProductDto.setDescription(product.getDescription());
+        fakeStoreProductDto.setImage(product.getImageUrl());
+        if(product.getCategory() != null) {
+            fakeStoreProductDto.setCategory(product.getCategory().getTitle());
+        }
+        return fakeStoreProductDto;
+    }
+
+    private Product from(FakeStoreProductDto fakeStoreProductDto){
+        Product product = new Product();
+        product.setId(fakeStoreProductDto.getId());
+        product.setTitle(fakeStoreProductDto.getTitle());
+        product.setPrice(fakeStoreProductDto.getPrice());
+
+        Category category = new Category();
+        category.setTitle(fakeStoreProductDto.getCategory());
+
+        product.setCategory(category);
+        product.setDescription(fakeStoreProductDto.getDescription());
+        product.setImageUrl(fakeStoreProductDto.getImage());
+
+        return product;
     }
 }

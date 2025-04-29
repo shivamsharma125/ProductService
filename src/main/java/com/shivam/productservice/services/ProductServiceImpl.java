@@ -47,7 +47,7 @@ public class ProductServiceImpl implements ProductService {
         return savedProduct;
     }
 
-    @Override
+//    @Override
     public Product replaceProduct(Product product) {
         if (product.getId() == null){
             throw new RuntimeException("parameter id is not passed in the request!");
@@ -65,7 +65,7 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Product updateProduct(Product product) {
+    public Product updateProduct(Long productId, Product product) {
         if (product.getId() == null){
             throw new RuntimeException("product id should not be null.");
         }
@@ -111,15 +111,15 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public Product getProductById(Long id) {
-        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + id);
+    public Product getProductById(Long productId) {
+        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + productId);
 
         if (product != null) return product;
 
-        Optional<Product> optionalProduct = productRepository.findById(id);
+        Optional<Product> optionalProduct = productRepository.findById(productId);
 
         if (optionalProduct.isEmpty()){
-            throw new ElementNotFoundException("product with id " + id + " does not exists.");
+            throw new ElementNotFoundException("product with id " + productId + " does not exists.");
         }
 
         product = optionalProduct.get();
@@ -130,12 +130,12 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public List<Product> getAllProducts(Long id) {
+    public List<Product> getAllProducts(Long userId) {
         // This api is not for all users.
         // To call this api, a user should be a MENTOR or a ADMIN
 
         UserDetailsResponseDto responseDto = restTemplate.getForObject(
-                "http://UserService/users/" + id,
+                "http://UserService/users/" + userId,
                 UserDetailsResponseDto.class
         );
 
@@ -162,23 +162,25 @@ public class ProductServiceImpl implements ProductService {
     }
 
     @Override
-    public ResponseEntity<ResponseDto> deleteProduct(Long id) {
-        Optional<Product> optionalProduct = productRepository.findById(id);
+    public Boolean deleteProduct(Long productId) {
+        Optional<Product> optionalProduct = productRepository.findById(productId);
 
         if (optionalProduct.isEmpty()){
-            throw new ElementNotFoundException("product with id " + id + " does not exists.");
+            throw new ElementNotFoundException("product with id " + productId + " does not exists.");
         }
 
-        productRepository.deleteById(id);
+        productRepository.deleteById(productId);
 
         ResponseDto responseDto = new ResponseDto();
-        if (!productRepository.existsById(id)){
-            responseDto.setMessage("product with id " + id + " is successfully deleted.");
-            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + id);
+        boolean isDeleted = !productRepository.existsById(productId);
+        if (isDeleted){
+            responseDto.setMessage("product with id " + productId + " is successfully deleted.");
+            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + productId);
         } else {
             responseDto.setMessage("Something went wrong. Please try again.");
         }
-        return new ResponseEntity<>(responseDto, HttpStatus.OK);
+//        return new ResponseEntity<>("responseDto", HttpStatus.OK);
+        return isDeleted;
     }
 
     public Page<Product> searchProduct(int pageNumber, int pageSize){
