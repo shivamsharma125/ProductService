@@ -1,11 +1,9 @@
 package com.shivam.productservice.services;
 
-import com.shivam.productservice.dtos.ResponseDto;
 import com.shivam.productservice.dtos.Role;
 import com.shivam.productservice.dtos.UserDetailsResponseDto;
 import com.shivam.productservice.dtos.UserDto;
-import com.shivam.productservice.exceptions.ElementNotFoundException;
-import com.shivam.productservice.models.Category;
+import com.shivam.productservice.exceptions.ProductNotFoundException;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.repositories.CategoryRepository;
 import com.shivam.productservice.repositories.ProductRepository;
@@ -14,23 +12,20 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service("selfProductService")
 @Primary
-public class ProductServiceImpl implements ProductService {
+public class SelfProductService implements ProductService {
     private ProductRepository productRepository;
     private CategoryRepository categoryRepository;
     private RestTemplate restTemplate;
     private RedisTemplate<String,Object> redisTemplate;
 
-    public ProductServiceImpl(ProductRepository productRepository,
+    public SelfProductService(ProductRepository productRepository,
                               CategoryRepository categoryRepository,
                               RestTemplate restTemplate,
                               RedisTemplate<String,Object> redisTemplate){
@@ -47,63 +42,12 @@ public class ProductServiceImpl implements ProductService {
         return savedProduct;
     }
 
-//    @Override
-    public Product replaceProduct(Product product) {
-        if (product.getId() == null){
-            throw new RuntimeException("parameter id is not passed in the request!");
-        }
-
-        Optional<Product> optionalProduct = productRepository.findById(product.getId());
-
-        if (optionalProduct.isEmpty()){
-            throw new ElementNotFoundException("product with id " + product.getId() + " does not exists.");
-        }
-
-        Product savedProduct = productRepository.save(product);
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
-        return savedProduct;
-    }
-
     @Override
     public Product updateProduct(Long productId, Product product) {
-        if (product.getId() == null){
-            throw new RuntimeException("product id should not be null.");
-        }
+        productRepository.findById(product.getId())
+                .orElseThrow(() -> new ProductNotFoundException(productId));
 
-        Optional<Product> optionalProduct = productRepository.findById(product.getId());
-
-        if (optionalProduct.isEmpty()){
-            throw new ElementNotFoundException("product with id " + product.getId() + " does not exists.");
-        }
-
-        Product saveProduct = optionalProduct.get();
-
-        if(product.getTitle() != null){
-            saveProduct.setTitle(product.getTitle());
-        }
-
-        if(product.getPrice() != null){
-            saveProduct.setPrice(product.getPrice());
-        }
-
-        if (product.getCategory() != null && product.getCategory().getId() != null){
-            Optional<Category> optionalCategory = categoryRepository.findById(product.getCategory().getId());
-            if (optionalCategory.isEmpty()) {
-                throw new ElementNotFoundException("category with id " +
-                        product.getCategory().getId() + " is not present.");
-            }
-            saveProduct.setCategory(optionalCategory.get());
-        }
-
-        if (product.getDescription() != null){
-            saveProduct.setDescription(product.getDescription());
-        }
-
-        if (product.getImageUrl() != null){
-            saveProduct.setImageUrl(product.getImageUrl());
-        }
-
-        Product savedProduct = productRepository.save(saveProduct);
+        Product savedProduct = productRepository.save(product);
 
         redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
 
@@ -116,13 +60,8 @@ public class ProductServiceImpl implements ProductService {
 
         if (product != null) return product;
 
-        Optional<Product> optionalProduct = productRepository.findById(productId);
-
-        if (optionalProduct.isEmpty()){
-            throw new ElementNotFoundException("product with id " + productId + " does not exists.");
-        }
-
-        product = optionalProduct.get();
+        product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
 
         redisTemplate.opsForHash().put("PRODUCTS", "product_" + product.getId(), product);
 
@@ -131,8 +70,8 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public List<Product> getAllProducts(Long userId) {
-        // This api is not for all users.
-        // To call this api, a user should be a MENTOR or a ADMIN
+        // This API is restricted
+        // Can be called by ADMIN only
 
         UserDetailsResponseDto responseDto = restTemplate.getForObject(
                 "http://UserService/users/" + userId,
@@ -163,23 +102,18 @@ public class ProductServiceImpl implements ProductService {
 
     @Override
     public Boolean deleteProduct(Long productId) {
-        Optional<Product> optionalProduct = productRepository.findById(productId);
-
-        if (optionalProduct.isEmpty()){
-            throw new ElementNotFoundException("product with id " + productId + " does not exists.");
-        }
+        productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException(productId));
 
         productRepository.deleteById(productId);
 
-        ResponseDto responseDto = new ResponseDto();
         boolean isDeleted = !productRepository.existsById(productId);
-        if (isDeleted){
-            responseDto.setMessage("product with id " + productId + " is successfully deleted.");
+
+        if (isDeleted) {
+            // Delete the product from the cache as well
             redisTemplate.opsForHash().delete("PRODUCTS", "product_" + productId);
-        } else {
-            responseDto.setMessage("Something went wrong. Please try again.");
         }
-//        return new ResponseEntity<>("responseDto", HttpStatus.OK);
+
         return isDeleted;
     }
 

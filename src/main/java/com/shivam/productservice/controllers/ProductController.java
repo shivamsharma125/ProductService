@@ -6,6 +6,7 @@ import com.shivam.productservice.dtos.ProductDto;
 import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.dtos.ValidateTokenResponseDto;
 import com.shivam.productservice.exceptions.InvalidProductIdException;
+import com.shivam.productservice.exceptions.ProductNotFoundException;
 import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.services.ProductService;
@@ -23,7 +24,7 @@ public class ProductController {
     private final ProductService productService;
     private final AuthenticationCommons authenticationCommons;
 
-    public ProductController(@Qualifier("fakeStoreProductService") ProductService productService,
+    public ProductController(@Qualifier("selfProductService") ProductService productService,
                              AuthenticationCommons authenticationCommons){
         this.productService = productService;
         this.authenticationCommons = authenticationCommons;
@@ -32,6 +33,8 @@ public class ProductController {
     @GetMapping("/all/{userId}")
     public ResponseEntity<List<ProductDto>> getAllProducts(@PathVariable("userId") Long userId){
         List<Product> products = productService.getAllProducts(userId);
+
+        if(products == null) throw new ProductNotFoundException("No products found");
 
         List<ProductDto> productDtos = products.stream()
                 .map(this::from)
@@ -63,12 +66,14 @@ public class ProductController {
 
     @PutMapping("/{id}")
     public ResponseEntity<ProductDto> updateProduct(@PathVariable("id") Long productId, @RequestBody ProductDto productDto){
+        if(productId <= 0) throw new InvalidProductIdException(productId);
         Product updatedProduct = productService.updateProduct(productId,from(productDto));
         return new ResponseEntity<>(from(updatedProduct), HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<String> deleteProduct(@PathVariable("id") Long productId){
+        if(productId <= 0) throw new InvalidProductIdException(productId);
         Boolean isDeleted = productService.deleteProduct(productId);
 
         if(!isDeleted)
