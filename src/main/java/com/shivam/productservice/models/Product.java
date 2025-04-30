@@ -13,10 +13,10 @@ import java.io.Serializable;
 @Entity(name = "products")
 public class Product extends BaseModel implements Serializable {
     private String title;
+    private String description;
     private Double price;
+    private String imageUrl;
     @ManyToOne(cascade = CascadeType.PERSIST)
     private Category category;
-    private String description;
-    private String imageUrl;
     private Boolean isPremium;
 }
