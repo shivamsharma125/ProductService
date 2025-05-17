@@ -1,22 +1,22 @@
 package com.shivam.productservice.controllers;
 
 import com.shivam.productservice.commons.AuthenticationCommons;
-import com.shivam.productservice.dtos.CategoryDto;
 import com.shivam.productservice.dtos.ProductDto;
 import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.dtos.ValidateTokenResponseDto;
 import com.shivam.productservice.exceptions.InvalidProductIdException;
 import com.shivam.productservice.exceptions.ProductNotFoundException;
-import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.services.ProductService;
+import com.shivam.productservice.utils.ProductUtil;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+
+import static com.shivam.productservice.utils.ProductUtil.from;
 
 @RestController
 @RequestMapping("/products")
@@ -37,7 +37,7 @@ public class ProductController {
         if(products == null) throw new ProductNotFoundException("No products found");
 
         List<ProductDto> productDtos = products.stream()
-                .map(this::from)
+                .map(ProductUtil::from)
                 .toList();
 
         return new ResponseEntity<>(productDtos,HttpStatus.OK);
@@ -45,7 +45,7 @@ public class ProductController {
 
     @PostMapping
     public ResponseEntity<ProductDto> createProduct(@RequestBody ProductDto productDto){
-        Product savedProduct = productService.createProduct(from(productDto));
+        Product savedProduct = productService.createProduct(ProductUtil.from(productDto));
         return new ResponseEntity<>(from(savedProduct),HttpStatus.CREATED);
     }
 
@@ -80,50 +80,5 @@ public class ProductController {
             return new ResponseEntity<>("Something went wrong. Please try again", HttpStatus.INTERNAL_SERVER_ERROR);
 
         return new ResponseEntity<>("product with id " + productId + " is successfully deleted", HttpStatus.OK);
-    }
-
-    @GetMapping("/search")
-    public Page<Product> searchProduct(@RequestParam("pageNumber") int pageNumber,
-                                       @RequestParam("pageSize") int pageSize){
-        return productService.searchProduct(pageNumber, pageSize);
-    }
-
-    @GetMapping("/search/filter")
-    public Page<Product> searchProduct(@RequestParam("pageNumber") int pageNumber,
-                                       @RequestParam("pageSize") int pageSize,
-                                       @RequestParam("sortBy") String sortingParam){
-        return productService.searchProduct(pageNumber, pageSize, sortingParam);
-    }
-
-    private ProductDto from(Product product) {
-        ProductDto productDto = new ProductDto();
-        productDto.setId(product.getId());
-        productDto.setTitle(product.getTitle());
-        productDto.setDescription(product.getDescription());
-        productDto.setPrice(product.getPrice());
-        productDto.setImageUrl(product.getImageUrl());
-        if(product.getCategory() != null) {
-            CategoryDto categoryDto = new CategoryDto();
-            categoryDto.setTitle(product.getCategory().getTitle());
-            categoryDto.setId(product.getCategory().getId());
-            categoryDto.setDescription(product.getCategory().getDescription());
-            productDto.setCategory(categoryDto);
-        }
-        return productDto;
-    }
-
-    private Product from(ProductDto productDto) {
-        Product product = new Product();
-        product.setId(productDto.getId());
-        product.setTitle(productDto.getTitle());
-        product.setPrice(productDto.getPrice());
-        product.setImageUrl(productDto.getImageUrl());
-        product.setDescription(productDto.getDescription());
-        if(productDto.getCategory() != null) {
-            Category category = new Category();
-            category.setTitle(productDto.getCategory().getTitle());
-            product.setCategory(category);
-        }
-        return product;
     }
 }

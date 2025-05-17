@@ -99,16 +99,6 @@ public class FakeStoreProductService implements ProductService {
         return responseProductDto != null;
     }
 
-    @Override
-    public Page<Product> searchProduct(int pageNumber, int pageSize) {
-        return null;
-    }
-
-    @Override
-    public Page<Product> searchProduct(int pageNumber, int pageSize, String sortingParam) {
-        return null;
-    }
-
     private FakeStoreProductDto from(Product product) {
         FakeStoreProductDto fakeStoreProductDto = new FakeStoreProductDto();
         fakeStoreProductDto.setId(product.getId());

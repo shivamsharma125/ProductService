@@ -5,12 +5,8 @@ import com.shivam.productservice.dtos.UserDetailsResponseDto;
 import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.exceptions.ProductNotFoundException;
 import com.shivam.productservice.models.Product;
-import com.shivam.productservice.repositories.CategoryRepository;
 import com.shivam.productservice.repositories.ProductRepository;
 import org.springframework.context.annotation.Primary;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -21,16 +17,13 @@ import java.util.List;
 @Primary
 public class SelfProductService implements ProductService {
     private ProductRepository productRepository;
-    private CategoryRepository categoryRepository;
     private RestTemplate restTemplate;
     private RedisTemplate<String,Object> redisTemplate;
 
     public SelfProductService(ProductRepository productRepository,
-                              CategoryRepository categoryRepository,
                               RestTemplate restTemplate,
                               RedisTemplate<String,Object> redisTemplate){
         this.productRepository = productRepository;
-        this.categoryRepository = categoryRepository;
         this.restTemplate = restTemplate;
         this.redisTemplate = redisTemplate;
     }
@@ -115,17 +108,5 @@ public class SelfProductService implements ProductService {
         }
 
         return isDeleted;
-    }
-
-    public Page<Product> searchProduct(int pageNumber, int pageSize){
-        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize);
-        return productRepository.findAll(pageRequest);
-    }
-
-    @Override
-    public Page<Product> searchProduct(int pageNumber, int pageSize, String sortingParam) {
-        Sort sort = Sort.by(sortingParam).descending();
-        PageRequest pageRequest = PageRequest.of(pageNumber, pageSize, sort);
-        return productRepository.findAll(pageRequest);
     }
 }

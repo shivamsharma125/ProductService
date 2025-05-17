@@ -21,5 +21,5 @@ public abstract class BaseModel {
     private Date createdAt;
     @LastModifiedDate
     private Date lastModifiedAt;
-    private State state;
+    private State state = State.ACTIVE;
 }

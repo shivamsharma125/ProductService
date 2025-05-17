@@ -44,7 +44,7 @@ public class ProductControllerMvcTest {
 
         List<Product> products = List.of(product1,product2);
 
-        when(productService.getAllProducts()).thenReturn(products);
+        when(productService.getAllProducts(0L)).thenReturn(products);
 
         ProductDto productDto1 = new ProductDto();
         productDto1.setId(1L);

@@ -12,4 +12,5 @@ public class ProductDto {
     private String imageUrl;
     private Double price;
     private CategoryDto category;
+    private Boolean isPremium;
 }
