@@ -50,6 +50,11 @@ public class FakeStoreProductService implements ProductService {
     }
 
     @Override
+    public Product getProductBasedOnUserRole(Long productId, Long userId) {
+        return new Product();
+    }
+
+    @Override
     public Product getProductById(Long productId) throws ProductNotFoundException {
 //      first check this product in the cache
         Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + productId);

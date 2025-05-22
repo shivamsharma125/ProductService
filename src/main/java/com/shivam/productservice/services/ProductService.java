@@ -9,6 +9,7 @@ public interface ProductService {
     List<Product> getAllProducts(Long userId);
     Product createProduct(Product product);
     Product getProductById(Long productId) throws ProductNotFoundException;
+    Product getProductBasedOnUserRole(Long productId, Long userId);
     Product updateProduct(Long productId, Product product);
     Boolean deleteProduct(Long productId);
 }

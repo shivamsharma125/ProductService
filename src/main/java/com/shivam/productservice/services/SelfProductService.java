@@ -1,13 +1,15 @@
 package com.shivam.productservice.services;
 
-import com.shivam.productservice.dtos.Role;
+import com.shivam.productservice.dtos.RoleDto;
 import com.shivam.productservice.dtos.UserDetailsResponseDto;
 import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.exceptions.ProductNotFoundException;
+import com.shivam.productservice.exceptions.UnAuthorizedUserException;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.repositories.ProductRepository;
 import org.springframework.context.annotation.Primary;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
@@ -48,6 +50,21 @@ public class SelfProductService implements ProductService {
     }
 
     @Override
+    public Product getProductBasedOnUserRole(Long productId, Long userId) {
+        String url = "http://UserService/users/{userId}";
+        ResponseEntity<UserDto> response = restTemplate.getForEntity(url, UserDto.class, userId);
+        if (response.getBody() == null)
+            throw new RuntimeException("Something went wrong while getting user details");
+
+        UserDto userDto = response.getBody();
+        if (userDto.getRoles().stream().noneMatch(roleDto -> roleDto.getName().equals("CUSTOMER")))
+            throw new UnAuthorizedUserException("user is not authorized to query product details");
+
+        return productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("product with id " + productId + " does not exist"));
+    }
+
+    @Override
     public Product getProductById(Long productId) {
         Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + productId);
 
@@ -79,7 +96,7 @@ public class SelfProductService implements ProductService {
 
         boolean isMentorOrAdmin = false;
 
-        for (Role role : userDto.getRoles()){
+        for (RoleDto role : userDto.getRoles()){
             if ("MENTOR".equals(role.getName()) || "ADMIN".equals(role.getName())){
                 isMentorOrAdmin = true;
                 break;

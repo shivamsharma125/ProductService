@@ -49,7 +49,14 @@ public class ProductController {
         return new ResponseEntity<>(from(savedProduct),HttpStatus.CREATED);
     }
 
-    @GetMapping("/{id}/{token}")
+    @GetMapping("{productId}/{userId}")
+    public ResponseEntity<ProductDto> getProductDetailsBasedOnUserRole(@PathVariable Long productId,
+                                                                       @PathVariable Long userId) {
+        Product savedProduct = productService.getProductBasedOnUserRole(productId,userId);
+        return ResponseEntity.ok(from(savedProduct));
+    }
+
+    @GetMapping("product/{id}/{token}/")
     public ResponseEntity<ProductDto> getProductById(@PathVariable("id") Long productId, @PathVariable("token") String token) {
         if(productId <= 0) throw new InvalidProductIdException(productId);
 
