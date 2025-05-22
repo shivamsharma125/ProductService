@@ -79,34 +79,7 @@ public class SelfProductService implements ProductService {
     }
 
     @Override
-    public List<Product> getAllProducts(Long userId) {
-        // This API is restricted
-        // Can be called by ADMIN only
-
-        UserDetailsResponseDto responseDto = restTemplate.getForObject(
-                "http://UserService/users/" + userId,
-                UserDetailsResponseDto.class
-        );
-
-        if (responseDto == null){
-            throw new RuntimeException("Something went wrong");
-        }
-
-        UserDto userDto = responseDto.getUser();
-
-        boolean isMentorOrAdmin = false;
-
-        for (RoleDto role : userDto.getRoles()){
-            if ("MENTOR".equals(role.getName()) || "ADMIN".equals(role.getName())){
-                isMentorOrAdmin = true;
-                break;
-            }
-        }
-
-        if (!isMentorOrAdmin){
-            throw new RuntimeException("Not MENTOR or a ADMIN user");
-        }
-
+    public List<Product> getAllProducts() {
         return productRepository.findAll();
     }
 

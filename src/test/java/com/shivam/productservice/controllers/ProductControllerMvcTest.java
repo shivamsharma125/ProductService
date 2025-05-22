@@ -14,9 +14,9 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ProductController.class)
@@ -44,7 +44,7 @@ public class ProductControllerMvcTest {
 
         List<Product> products = List.of(product1,product2);
 
-        when(productService.getAllProducts(0L)).thenReturn(products);
+        when(productService.getAllProducts()).thenReturn(products);
 
         ProductDto productDto1 = new ProductDto();
         productDto1.setId(1L);

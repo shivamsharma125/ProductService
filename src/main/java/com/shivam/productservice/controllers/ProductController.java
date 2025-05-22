@@ -1,9 +1,6 @@
 package com.shivam.productservice.controllers;
 
-import com.shivam.productservice.commons.AuthenticationCommons;
 import com.shivam.productservice.dtos.ProductDto;
-import com.shivam.productservice.dtos.UserDto;
-import com.shivam.productservice.dtos.ValidateTokenResponseDto;
 import com.shivam.productservice.exceptions.InvalidProductIdException;
 import com.shivam.productservice.exceptions.ProductNotFoundException;
 import com.shivam.productservice.models.Product;
@@ -22,17 +19,14 @@ import static com.shivam.productservice.utils.ProductUtil.from;
 @RequestMapping("/products")
 public class ProductController {
     private final ProductService productService;
-    private final AuthenticationCommons authenticationCommons;
 
-    public ProductController(@Qualifier("selfProductService") ProductService productService,
-                             AuthenticationCommons authenticationCommons){
+    public ProductController(@Qualifier("selfProductService") ProductService productService){
         this.productService = productService;
-        this.authenticationCommons = authenticationCommons;
     }
 
-    @GetMapping("/all/{userId}")
-    public ResponseEntity<List<ProductDto>> getAllProducts(@PathVariable("userId") Long userId){
-        List<Product> products = productService.getAllProducts(userId);
+    @GetMapping
+    public ResponseEntity<List<ProductDto>> getAllProducts(){
+        List<Product> products = productService.getAllProducts();
 
         if(products == null) throw new ProductNotFoundException("No products found");
 
@@ -56,18 +50,10 @@ public class ProductController {
         return ResponseEntity.ok(from(savedProduct));
     }
 
-    @GetMapping("product/{id}/{token}/")
-    public ResponseEntity<ProductDto> getProductById(@PathVariable("id") Long productId, @PathVariable("token") String token) {
+    @GetMapping("/{id}")
+    public ResponseEntity<ProductDto> getProductById(@PathVariable("id") Long productId) {
         if(productId <= 0) throw new InvalidProductIdException(productId);
-
-        // Service can be called by authenticated users only
-        ValidateTokenResponseDto responseDto = authenticationCommons.validateToken(token);
-        UserDto userDto = responseDto.getUserDto();
-        if (userDto == null){
-            throw new RuntimeException(responseDto.getFailureMessage());
-        }
         Product product = productService.getProductById(productId);
-
         return new ResponseEntity<>(from(product), HttpStatus.OK);
     }
 

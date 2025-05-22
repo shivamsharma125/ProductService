@@ -40,7 +40,7 @@ class ProductControllerTest {
         when(productService.getProductById(4L)).thenReturn(product);
 
         // Act
-        ResponseEntity<ProductDto> response = productController.getProductById(4L,"");
+        ResponseEntity<ProductDto> response = productController.getProductById(4L);
 
         // Assert
         assert(response != null);
@@ -56,7 +56,7 @@ class ProductControllerTest {
     void test_GetProductsById_CalledWithInvalidId_ResultsInInvalidProductIdException() {
         // Act & Assert
         Exception exception = assertThrows(InvalidProductIdException.class,
-                () -> productController.getProductById(-1L,""));
+                () -> productController.getProductById(-1L));
 
         assertEquals("product id -1 is invalid", exception.getMessage());
     }
@@ -70,7 +70,7 @@ class ProductControllerTest {
         when(productService.getProductById(4L)).thenReturn(product);
 
         // Act
-        productController.getProductById(4L,"");
+        productController.getProductById(4L);
 
         // Assert
         verify(productService).getProductById(idCaptor.capture());

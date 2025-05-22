@@ -23,7 +23,7 @@ public class FakeStoreProductService implements ProductService {
     }
 
     @Override
-    public List<Product> getAllProducts(Long userId) {
+    public List<Product> getAllProducts() {
         List<FakeStoreProductDto> fakeStoreProductDtos = fakeStoreApiClient.getAllProducts();
 
         if (fakeStoreProductDtos == null) throw new ProductNotFoundException("No products available!");

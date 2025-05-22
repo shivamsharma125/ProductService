@@ -6,6 +6,7 @@ import jakarta.persistence.OneToMany;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.util.List;
 
@@ -13,6 +14,9 @@ import java.util.List;
 @Setter
 @Entity(name = "categories")
 public class Category extends BaseModel implements Serializable {
+    @Serial
+    private static final long serialVersionUID = 2L;
+
     private String title;
     private String description;
     @OneToMany(mappedBy = "category", cascade = CascadeType.REMOVE)
