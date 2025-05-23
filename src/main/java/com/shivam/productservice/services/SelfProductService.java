@@ -18,9 +18,9 @@ import java.util.List;
 @Service("selfProductService")
 @Primary
 public class SelfProductService implements ProductService {
-    private ProductRepository productRepository;
-    private RestTemplate restTemplate;
-    private RedisTemplate<String,Object> redisTemplate;
+    private final ProductRepository productRepository;
+    private final RestTemplate restTemplate;
+    private final RedisTemplate<String,Object> redisTemplate;
 
     public SelfProductService(ProductRepository productRepository,
                               RestTemplate restTemplate,
@@ -33,7 +33,7 @@ public class SelfProductService implements ProductService {
     @Override
     public Product createProduct(Product product) {
         Product savedProduct = productRepository.save(product);
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+        redisTemplate.opsForHash().put("PRODUCTS", savedProduct.getId(), savedProduct);
         return savedProduct;
     }
 
@@ -44,7 +44,7 @@ public class SelfProductService implements ProductService {
 
         Product savedProduct = productRepository.save(product);
 
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+        redisTemplate.opsForHash().put("PRODUCTS", savedProduct.getId(), savedProduct);
 
         return savedProduct;
     }
@@ -60,20 +60,19 @@ public class SelfProductService implements ProductService {
         if (userDto.getRoles().stream().noneMatch(roleDto -> roleDto.getName().equals("CUSTOMER")))
             throw new UnAuthorizedUserException("user is not authorized to query product details");
 
-        return productRepository.findById(productId)
-                .orElseThrow(() -> new ProductNotFoundException("product with id " + productId + " does not exist"));
+        return getProductById(productId);
     }
 
     @Override
     public Product getProductById(Long productId) {
-        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + productId);
+        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", productId);
 
         if (product != null) return product;
 
         product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException(productId));
 
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + product.getId(), product);
+        redisTemplate.opsForHash().put("PRODUCTS", product.getId(), product);
 
         return product;
     }
@@ -94,7 +93,7 @@ public class SelfProductService implements ProductService {
 
         if (isDeleted) {
             // Delete the product from the cache as well
-            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + productId);
+            redisTemplate.opsForHash().delete("PRODUCTS", productId);
         }
 
         return isDeleted;

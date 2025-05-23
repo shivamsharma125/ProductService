@@ -44,7 +44,7 @@ public class FakeStoreProductService implements ProductService {
         Product savedProduct = from(fakeStoreProductDto);
 
         // save product in cache
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+        redisTemplate.opsForHash().put("PRODUCTS", savedProduct.getId(), savedProduct);
 
         return savedProduct;
     }
@@ -57,7 +57,7 @@ public class FakeStoreProductService implements ProductService {
     @Override
     public Product getProductById(Long productId) throws ProductNotFoundException {
 //      first check this product in the cache
-        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", "product_" + productId);
+        Product product = (Product) redisTemplate.opsForHash().get("PRODUCTS", productId);
 
         if (product != null) // CACHE HIT
             return product;
@@ -70,7 +70,7 @@ public class FakeStoreProductService implements ProductService {
         product = from(fakeStoreProductDto);
 
         // save the result in the cache
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + productId, product);
+        redisTemplate.opsForHash().put("PRODUCTS", productId, product);
 
         return product;
     }
@@ -87,7 +87,7 @@ public class FakeStoreProductService implements ProductService {
         Product savedProduct = from(fakeStoreProductDto);
 
         // save the product in cache
-        redisTemplate.opsForHash().put("PRODUCTS", "product_" + savedProduct.getId(), savedProduct);
+        redisTemplate.opsForHash().put("PRODUCTS", savedProduct.getId(), savedProduct);
 
         return savedProduct;
     }
@@ -98,7 +98,7 @@ public class FakeStoreProductService implements ProductService {
 
         if(responseProductDto != null) {
             // product is deleted from db, delete the product from cache as well
-            redisTemplate.opsForHash().delete("PRODUCTS", "product_" + productId);
+            redisTemplate.opsForHash().delete("PRODUCTS", productId);
         }
 
         return responseProductDto != null;
