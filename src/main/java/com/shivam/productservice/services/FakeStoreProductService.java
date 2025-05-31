@@ -5,10 +5,10 @@ import com.shivam.productservice.dtos.FakeStoreProductDto;
 import com.shivam.productservice.exceptions.ProductNotFoundException;
 import com.shivam.productservice.models.Category;
 import com.shivam.productservice.models.Product;
-import org.springframework.data.domain.Page;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service("fakeStoreProductService")
@@ -26,7 +26,7 @@ public class FakeStoreProductService implements ProductService {
     public List<Product> getAllProducts() {
         List<FakeStoreProductDto> fakeStoreProductDtos = fakeStoreApiClient.getAllProducts();
 
-        if (fakeStoreProductDtos == null) throw new ProductNotFoundException("No products available!");
+        if (fakeStoreProductDtos == null) return new ArrayList<>();
 
         return fakeStoreProductDtos.stream()
                 .map(this::from)
