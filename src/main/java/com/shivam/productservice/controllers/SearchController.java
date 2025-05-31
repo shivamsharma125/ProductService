@@ -1,9 +1,11 @@
 package com.shivam.productservice.controllers;
 
 import com.shivam.productservice.dtos.ProductDto;
+import com.shivam.productservice.exceptions.InvalidRequestException;
 import com.shivam.productservice.models.Product;
 import com.shivam.productservice.services.SearchService;
 import com.shivam.productservice.utils.ProductUtil;
+import com.shivam.productservice.utils.RequestUtils;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,6 +35,8 @@ public class SearchController {
             @RequestParam(defaultValue = "title") String sortBy,
             @RequestParam(defaultValue = "asc") String direction
     ) {
+        if (RequestUtils.isEmptyParam(query)) throw new InvalidRequestException("query cannot be empty");
+
         Page<Product> page = searchService.searchProducts(
                 query, category, minPrice, maxPrice,
                 isPremium, pageNo, pageSize, sortBy, direction
