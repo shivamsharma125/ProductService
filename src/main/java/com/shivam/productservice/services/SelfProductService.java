@@ -1,7 +1,5 @@
 package com.shivam.productservice.services;
 
-import com.shivam.productservice.dtos.RoleDto;
-import com.shivam.productservice.dtos.UserDetailsResponseDto;
 import com.shivam.productservice.dtos.UserDto;
 import com.shivam.productservice.exceptions.ProductNotFoundException;
 import com.shivam.productservice.exceptions.UnAuthorizedUserException;
